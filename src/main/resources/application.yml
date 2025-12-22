@@ -1,0 +1,50 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    session:
+      timeout: 30m
+
+spring:
+  application:
+    name: nativeflow
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: true
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    connect-retries: 10
+    connect-retries-interval: 5
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: 5672
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASS}
+    virtual-host: ${RABBITMQ_USER}
+
+  data:
+    mongodb:
+      auto-index-creation: true
+  mongodb:
+    uri: ${SPRING_DATA_MONGODB_URI}
+
+logging:
+  level:
+    root: INFO
+    com.nativeflow: DEBUG
+    org.springframework.web: INFO
+    org.springframework.data.mongodb: INFO
