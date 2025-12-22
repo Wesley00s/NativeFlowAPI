@@ -1,0 +1,29 @@
+package com.content.api.v1.controller
+
+import com.content.api.v1.dto.VideoTaskRequest
+import com.content.api.v1.dto.response.TextResponse
+import com.content.messaging.config.RabbitConfig
+import com.content.service.VideoService
+import org.springframework.amqp.rabbit.core.RabbitTemplate
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+@RequestMapping("/v1/queue")
+class QueueController(
+    private val videoService: VideoService
+) {
+    @PostMapping("/publish")
+    fun sendToQueue(@RequestBody request: VideoTaskRequest): ResponseEntity<TextResponse> {
+        videoService.initiateProcessing(request)
+        return ResponseEntity.accepted().body(
+            TextResponse(
+                text = "Processing started for ${request.videoId}",
+                statusCode = 202
+            )
+        )
+    }
+}
