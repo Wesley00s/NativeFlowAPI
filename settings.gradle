@@ -1,0 +1,6 @@
+rootProject.name = 'NativeFlow'
+
+include 'identity'
+include 'content'
+include 'gamification'
+include 'learning'
