@@ -23,30 +23,3 @@ data class Video(
     val sourceData: SourceData? = null,
     val translations: List<TranslationData> = emptyList(),
 )
-
-data class SourceData(
-    val language: String,
-    val fullText: String,
-    val transcription: List<TranscriptionSegment>
-)
-
-data class TranslationData(
-    val languageCode: String,
-    val status: String,
-    val translatedText: String,
-    val subtitles: List<SubtitleItem> = emptyList()
-)
-
-data class TranscriptionSegment(
-    val text: String,
-    val start: Double,
-    val end: Double,
-    val conf: Double
-)
-
-data class SubtitleItem(
-    val text: String,
-    val start: Double,
-    val end: Double,
-    val conf: Double? = null
-)
