@@ -1,3 +1,13 @@
+jwt:
+  private:
+    key:
+      path: classpath:certs/private_key.pem
+  public:
+    key:
+      path: classpath:certs/public_key.pem
+
+  issuer: "mycompany.com"
+
 server:
   port: 8080
   servlet:
