@@ -31,6 +31,8 @@ class SecurityConfig (
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
+                    "/v1/curation/**",
+                    "/v1/auth/**",
                     "/docs"
                 ).permitAll()
 
