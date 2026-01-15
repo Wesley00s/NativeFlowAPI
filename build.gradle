@@ -1,9 +1,11 @@
 plugins {
+
     id 'org.jetbrains.kotlin.jvm' version '2.2.21' apply false
     id 'org.jetbrains.kotlin.plugin.spring' version '2.2.21' apply false
     id 'org.jetbrains.kotlin.plugin.jpa' version '2.2.21' apply false
     id 'org.springframework.boot' version '4.0.1' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'com.google.devtools.ksp' version '2.2.21-2.0.4' apply false
 }
 
 allprojects {
@@ -21,6 +23,8 @@ subprojects {
     apply plugin: 'org.springframework.boot'
     apply plugin: 'io.spring.dependency-management'
     apply plugin: 'org.jetbrains.kotlin.plugin.jpa'
+    apply plugin: 'com.google.devtools.ksp'
+    apply plugin: 'kotlin-kapt'
 
     java {
         toolchain {
@@ -32,7 +36,9 @@ subprojects {
         implementation 'org.springframework.boot:spring-boot-starter'
         implementation 'org.jetbrains.kotlin:kotlin-reflect'
         implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
-
+        implementation 'com.github.f4b6a3:uuid-creator:6.1.1'
+        implementation 'org.mapstruct:mapstruct:1.6.3'
+        kapt 'org.mapstruct:mapstruct-processor:1.6.3'
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
         testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -46,6 +52,15 @@ subprojects {
         compilerOptions {
             freeCompilerArgs.addAll '-Xjsr305=strict'
         }
+    }
+
+    kapt {
+        arguments {
+            arg("mapstruct.defaultComponentModel", "spring")
+            arg("mapstruct.unmappedTargetPolicy", "IGNORE")
+        }
+
+        useBuildCache = true
     }
 
     bootJar {
@@ -73,9 +88,7 @@ project(':') {
         implementation project(':content')
         implementation project(':gamification')
         implementation project(':learning')
-
-        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0'
-
+        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1'
         implementation 'org.springframework.boot:spring-boot-starter-web'
         implementation 'org.jetbrains.kotlin:kotlin-reflect'
         implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
