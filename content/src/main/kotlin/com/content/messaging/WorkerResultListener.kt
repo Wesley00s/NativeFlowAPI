@@ -1,6 +1,5 @@
 package com.content.messaging
 
-import com.content.api.v1.dto.messaging.SyncResultPayload
 import com.content.api.v1.dto.messaging.TranscriptionResultPayload
 import com.content.api.v1.dto.messaging.TranslationResultPayload
 import com.content.messaging.config.RabbitConfig
@@ -49,23 +48,6 @@ class WorkerResultListener(
             }
         } catch (e: Exception) {
             logger.error("Failed to process Translation message", e)
-        }
-    }
-
-    @RabbitListener(queues = [RabbitConfig.VIDEO_SYNC_RESULT])
-    fun handleSyncResult(jsonPayload: String) {
-        logger.debug("Received Sync Payload: {}", jsonPayload)
-
-        try {
-            val payload = objectMapper.readValue(jsonPayload, SyncResultPayload::class.java)
-
-            if (payload.status == "SUCCESS") {
-                videoService.handleSyncSuccess(payload)
-            } else {
-                logger.error("Worker reported Sync Error: {}", payload.errorMessage)
-            }
-        } catch (e: Exception) {
-            logger.error("Failed to process Sync message", e)
         }
     }
 }
