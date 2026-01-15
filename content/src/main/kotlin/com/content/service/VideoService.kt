@@ -1,10 +1,16 @@
 package com.content.service
 
 import com.content.api.v1.dto.VideoTaskRequest
-import com.content.api.v1.dto.messaging.*
+import com.content.api.v1.dto.messaging.TranscriptionResultPayload
+import com.content.api.v1.dto.messaging.TranslationCommandPayload
+import com.content.api.v1.dto.messaging.TranslationResultPayload
+import com.content.api.v1.dto.response.TranscriptionSegmentResponse
+import com.content.api.v1.dto.response.TranslationResponse
+import com.content.api.v1.dto.response.VideoDetailsResponse
+import com.content.api.v1.dto.response.VideoListItemResponse
+import com.content.domain.enums.Lang
 import com.content.domain.enums.VideoStatus
 import com.content.domain.model.SourceData
-import com.content.domain.model.SubtitleItem
 import com.content.domain.model.TranscriptionSegment
 import com.content.domain.model.TranslationData
 import com.content.domain.model.Video
@@ -12,6 +18,9 @@ import com.content.messaging.config.RabbitConfig
 import com.content.repository.VideoRepository
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.rabbit.core.RabbitTemplate
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -31,18 +40,14 @@ class VideoService(
             val video = videoOpt.get()
 
             if (video.sourceData != null) {
-                logger.info("Video ${request.videoId} already transcribed. Skipping to Translation/Sync.")
-
-                val transcriptionPayload = video.sourceData.transcription.map {
-                    SubtitleItemPayload(it.text, it.start, it.end, it.conf)
-                }
+                logger.info("Video ${request.videoId} already transcribed. Skipping to Translation.")
 
                 val command = TranslationCommandPayload(
                     videoId = request.videoId,
                     originalText = video.sourceData.fullText,
-                    sourceLang = video.sourceData.language,
-                    targetLang = request.translationLanguage,
-                    transcription = transcriptionPayload
+                    sourceLang = video.sourceData.language.llmLabel,
+                    targetLang = request.translationLanguage.llmLabel,
+                    transcription = emptyList()
                 )
 
                 val updatingVideo = video.copy(status = VideoStatus.TRANSLATING)
@@ -65,8 +70,7 @@ class VideoService(
         val videoToUpdate = if (existingVideo != null) {
             existingVideo
         } else {
-            logger.warn("Video not found in DB. Creating new entry automatically for ID: {}", payload.videoId)
-            
+            logger.warn("Creating new video entry for ID: {}", payload.videoId)
             Video(
                 sourceId = payload.videoId,
                 status = VideoStatus.PENDING,
@@ -76,39 +80,40 @@ class VideoService(
             )
         }
 
-        val targetLang = payload.targetLang
+        val targetLangLabel = payload.targetLang
 
         val command = TranslationCommandPayload(
             videoId = payload.videoId,
             originalText = payload.sourceData.fullText,
-            sourceLang = payload.sourceData.language,
-            targetLang = targetLang,
-            transcription = payload.sourceData.transcription
+            sourceLang = payload.sourceData.language.llmLabel,
+            targetLang = targetLangLabel,
+            transcription = emptyList()
         )
 
         val finalVideoState = videoToUpdate.copy(
-            status = VideoStatus.TRANSLATING, 
+            status = VideoStatus.TRANSLATING,
             durationSeconds = payload.duration.toLong(),
             updatedAt = Instant.now(),
             title = payload.sourceData.title ?: videoToUpdate.title,
             author = payload.sourceData.author,
             viewCount = payload.sourceData.viewCount,
             thumbnailUrl = payload.sourceData.thumbnailUrl,
-
-            
             sourceData = SourceData(
                 language = payload.sourceData.language,
                 fullText = payload.sourceData.fullText,
                 transcription = payload.sourceData.transcription.map {
-                    TranscriptionSegment(it.text, it.start, it.end, it.conf)
+                    TranscriptionSegment(
+                        text = it.text,
+                        start = it.start,
+                        end = it.end,
+                        conf = it.conf
+                    )
                 }
             )
         )
 
         videoRepository.save(finalVideoState)
-        logger.info("Video saved and updated. Status: TRANSLATING. ID: {}", finalVideoState.sourceId)
-
-        logger.info("Dispatching to Translation Queue (Target: {}).", targetLang)
+        logger.info("Video saved. Status: TRANSLATING. Dispatching to Translation Queue.")
         rabbitTemplate.convertAndSend(RabbitConfig.VIDEO_TRANSLATION_CMD, command)
     }
 
@@ -118,113 +123,91 @@ class VideoService(
         val video = videoRepository.findBySourceId(payload.videoId)
             .orElseThrow { RuntimeException("Video not found: ${payload.videoId}") }
 
-        val tempTranslation = TranslationData(
-            languageCode = payload.targetLang,
-            status = "TEXT_READY",
-            translatedText = payload.translatedText ?: "",
-            subtitles = emptyList()
-        )
-
-        val newTranslations = video.translations.filter { it.languageCode != payload.targetLang } + tempTranslation
-
-        val videoTextReady = video.copy(
-            status = VideoStatus.TRANSLATED_TEXT,
-            translations = newTranslations
-        )
-        videoRepository.save(videoTextReady)
-        logger.info("Translated text saved. Status: TRANSLATED_TEXT")
-
-        val originalTranscription = video.sourceData!!.transcription.map {
-            SubtitleItemPayload(it.text, it.start, it.end, it.conf)
-        }
-
-        if (originalTranscription.isEmpty()) {
-            logger.error(
-                "CRITICAL: Original transcription missing for video {}. Cannot proceed to Sync.",
-                video.sourceId
-            )
-            return
-        }
-
-        val syncCommand = SyncCommandPayload(
-            videoId = payload.videoId,
-            originalText = video.sourceData.fullText,
-            translatedText = payload.translatedText ?: "",
-            targetLang = payload.targetLang,
-            transcription = originalTranscription
-        )
-
-        val syncingVideo = videoTextReady.copy(status = VideoStatus.SYNCING)
-        videoRepository.save(syncingVideo)
-
-        logger.info("Dispatching to Sync Queue. Status: SYNCING")
-        rabbitTemplate.convertAndSend(RabbitConfig.VIDEO_SYNC_CMD, syncCommand)
-    }
-
-    @Transactional
-    fun handleSyncSuccess(payload: SyncResultPayload) {
-        logger.info("Processing sync success for videoId: {}", payload.videoId)
-        val video = videoRepository.findBySourceId(payload.videoId)
-            .orElseThrow { RuntimeException("Video not found: ${payload.videoId}") }
-
-        val existingTranslation = video.translations.find { it.languageCode == payload.targetLang }
-
-        val finalTranslation = existingTranslation?.copy(
-            status = "COMPLETED",
-            subtitles = payload.subtitles.map { SubtitleItem(it.text, it.start, it.end, it.conf) }
-        ) ?: TranslationData(
+        val finalTranslation = TranslationData(
             languageCode = payload.targetLang,
             status = "COMPLETED",
-            translatedText = "",
-            subtitles = payload.subtitles.map { SubtitleItem(it.text, it.start, it.end, it.conf) }
+            translatedText = payload.translatedText ?: ""
         )
 
-        val newTranslationsList = video.translations.filter { it.languageCode != payload.targetLang } + finalTranslation
+        val newTranslations = video.translations.filter { it.languageCode != payload.targetLang } + finalTranslation
 
-        val finalVideo = video.copy(
+        val videoPublished = video.copy(
             status = VideoStatus.PUBLISHED,
-            translations = newTranslationsList
+            translations = newTranslations,
+            updatedAt = Instant.now()
         )
 
-        videoRepository.save(finalVideo)
-        logger.info("CYCLE COMPLETE! Video published successfully. ID: {}", video.sourceId)
+        videoRepository.save(videoPublished)
+        logger.info("CYCLE COMPLETE! Video published successfully with translated text. ID: {}", video.sourceId)
     }
 
-    @Transactional
-    fun resyncVideo(videoId: String, lang: String) {
-        logger.info("Requesting Re-Sync for videoId: {} | Lang: {}", videoId, lang)
+    fun getPublishedVideos(title: String?, page: Int, size: Int): Page<VideoListItemResponse> {
+        val pageable = PageRequest.of(page, size, Sort.by("createdAt").descending())
+        val videoPage = if (title.isNullOrBlank()) {
+            videoRepository.findAllByStatus(VideoStatus.PUBLISHED, pageable)
+        } else {
+            videoRepository.findAllByStatusAndTitleContainingIgnoreCase(VideoStatus.PUBLISHED, title, pageable)
+        }
 
+        return videoPage.map { video ->
+            VideoListItemResponse(
+                id = video.sourceId,
+                title = video.title ?: "UNKNOW",
+                description = video.author?.let { "Canal: $it" },
+                thumbnailUrl = video.thumbnailUrl,
+                durationSeconds = video.durationSeconds,
+                lang = video.sourceData?.language ?: Lang.EN_US,
+                status = video.status
+            )
+        }
+    }
+
+    fun getVideoDetails(videoId: String, requestedLang: Lang?): VideoDetailsResponse {
         val video = videoRepository.findBySourceId(videoId)
-            .orElseThrow { RuntimeException("Video not found: $videoId") }
+            .orElseThrow { RuntimeException("Video not found with ID: $videoId") }
 
-        if (video.sourceData == null) {
-            throw RuntimeException("Cannot resync: Original transcription (SourceData) is missing.")
+        val sourceData = video.sourceData
+            ?: throw RuntimeException("Video data is incomplete for ID: $videoId")
+
+        val availableLangs = video.translations.mapNotNull { translation ->
+            Lang.entries.find { langEnum ->
+                langEnum.llmLabel.equals(translation.languageCode, ignoreCase = true)
+            }
         }
 
-        val existingTranslation = video.translations.find { it.languageCode == lang }
-            ?: throw RuntimeException("Cannot resync: Translation text for '$lang' not found. Run translation first.")
-
-        if (existingTranslation.translatedText.isBlank()) {
-            throw RuntimeException("Cannot resync: Translated text is empty.")
+        val translationData = if (requestedLang != null) {
+            video.translations.find {
+                it.languageCode.equals(requestedLang.llmLabel, ignoreCase = true)
+            }
+        } else {
+            null
         }
 
+        return VideoDetailsResponse(
+            id = video.sourceId,
+            title = video.title ?: "Unknown Title",
+            author = video.author,
+            videoUrl = "https://www.youtube.com/watch?v=${video.sourceId}",
+            durationSeconds = video.durationSeconds,
+            level = sourceData.language.name,
+            status = video.status,
+            originalLanguage = sourceData.language,
 
-        val originalTranscriptionPayload = video.sourceData.transcription.map {
-            SubtitleItemPayload(it.text, it.start, it.end, it.conf)
-        }
+            availableLanguages = availableLangs,
 
-        val syncCommand = SyncCommandPayload(
-            videoId = video.sourceId,
-            originalText = video.sourceData.fullText,
-            translatedText = existingTranslation.translatedText,
-            targetLang = lang,
-            transcription = originalTranscriptionPayload
+            transcription = sourceData.transcription.map {
+                TranscriptionSegmentResponse(
+                    text = it.text,
+                    start = it.start,
+                    end = it.end
+                )
+            },
+            translation = translationData?.let {
+                TranslationResponse(
+                    language = requestedLang!!,
+                    fullText = it.translatedText
+                )
+            }
         )
-
-        val syncingVideo = video.copy(status = VideoStatus.SYNCING)
-        videoRepository.save(syncingVideo)
-
-        logger.info("Dispatching existing data to Sync Queue. Status: SYNCING")
-        rabbitTemplate.convertAndSend(RabbitConfig.VIDEO_SYNC_CMD, syncCommand)
     }
 }
