@@ -23,6 +23,9 @@ class JwtConfig {
     @Value($$"${jwt.issuer}")
     private lateinit var issuer: String
 
+    @Value($$"${jwt.expiration}")
+    private var expiration: Long = 0
+
     @Bean
     fun publicKey(): RSAPublicKey {
         val keyBytes = publicKeyResource.inputStream.readAllBytes()
@@ -51,4 +54,8 @@ class JwtConfig {
 
     @Bean
     fun issuer(): String = issuer
+
+    @Bean
+    fun expiration(): Long = expiration
+
 }
