@@ -24,7 +24,7 @@ class TokenService(
             .withSubject(userId.toString())
             .withIssuedAt(Instant.now())
             .withExpiresAt(Date.from(Instant.now().plusMillis(expiration)))
-            .sign(algorithm);
+            .sign(algorithm)
 
     }
 
