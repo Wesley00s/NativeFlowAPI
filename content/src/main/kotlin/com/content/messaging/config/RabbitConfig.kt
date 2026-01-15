@@ -22,8 +22,6 @@ class RabbitConfig {
         const val VIDEO_TRANSCRIPTION_RESULT = "video.transcription.result"
         const val VIDEO_TRANSLATION_CMD = "video.translation.cmd"
         const val VIDEO_TRANSLATION_RESULT = "video.translation.result"
-        const val VIDEO_SYNC_CMD = "video.sync.cmd"
-        const val VIDEO_SYNC_RESULT = "video.sync.result"
     }
 
     @Bean
@@ -65,8 +63,4 @@ class RabbitConfig {
     fun translationCmdQueue() = Queue(VIDEO_TRANSLATION_CMD, true)
     @Bean
     fun translationResultQueue() = Queue(VIDEO_TRANSLATION_RESULT, true)
-    @Bean
-    fun syncCmdQueue() = Queue(VIDEO_SYNC_CMD, true)
-    @Bean
-    fun syncResultQueue() = Queue(VIDEO_SYNC_RESULT, true)
 }
