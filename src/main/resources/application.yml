@@ -7,6 +7,7 @@ jwt:
       path: classpath:certs/public_key.pem
 
   issuer: "mycompany.com"
+  expiration: 3600000
 
 server:
   port: 8080
@@ -56,5 +57,5 @@ logging:
   level:
     root: INFO
     com.nativeflow: DEBUG
-    org.springframework.web: INFO
-    org.springframework.data.mongodb: INFO
+    org.springframework.web: DEBUG
+    org.springframework.data.mongodb: DEBUG
