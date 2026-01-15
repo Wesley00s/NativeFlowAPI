@@ -4,10 +4,10 @@ import jakarta.persistence.Embeddable
 
 @Embeddable
 class Email(
-    val emailAddress: String
+    val value: String
 ) {
     init {
-        require(isValidEmail(emailAddress)) { "Invalid email address: $emailAddress" }
+        require(isValidEmail(value)) { "Invalid email address: $value" }
     }
 
     private fun isValidEmail(email: String): Boolean {
