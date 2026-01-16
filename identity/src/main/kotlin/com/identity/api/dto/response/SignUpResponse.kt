@@ -2,9 +2,10 @@ package com.identity.api.dto.response
 
 import com.identity.domain.model.Email
 import java.time.Instant
+import java.util.UUID
 
 data class SignUpResponse(
-    val id: String,
+    val id: UUID,
     val firstName: String,
     val lastName: String,
     val email: Email,
