@@ -1,5 +1,6 @@
 package com.identity.config.security
 
+import com.common.constansts.SecurityConstants
 import com.identity.domain.repository.UserRepository
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -59,7 +60,7 @@ class SecurityFilter(
 
         if (request.cookies != null) {
             return Arrays.stream(request.cookies)
-                .filter { cookie -> cookie.name == "nativeflow-jwt-token" }
+                .filter { cookie -> cookie.name == SecurityConstants.AUTH_COOKIE_NAME }
                 .findFirst()
                 .map { cookie -> cookie.value }
                 .orElse(null)
