@@ -1,6 +1,5 @@
 package com.identity.config.security
 
-import com.identity.domain.model.Email
 import com.identity.domain.repository.UserRepository
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -11,6 +10,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import java.util.Arrays
+import java.util.UUID 
 
 @Component
 class SecurityFilter(
@@ -22,35 +22,44 @@ class SecurityFilter(
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        val token = recoveryToken(request)
-        if (token == null) {
-            filterChain.doFilter(request, response)
-            return
-        }
-        val email = tokenService.validateToken(token)
-        if (email.isNullOrEmpty()) {
-            filterChain.doFilter(request, response)
-            return
-        }
+        try {
+            val token = recoveryToken(request)
 
-        userRepo.findByEmail(Email(email))
-            .ifPresent {
-                val authorities = it.authorities
-                val authentication = UsernamePasswordAuthenticationToken(
-                    it,
-                    null,
-                    authorities
-                )
-                authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
-                SecurityContextHolder.getContext().authentication = authentication
+            if (token == null) {
+                filterChain.doFilter(request, response)
+                return
             }
-        filterChain.doFilter(request, response)
+
+            val userIdString = tokenService.validateToken(token)
+
+            if (!userIdString.isNullOrEmpty()) {
+                val userId = UUID.fromString(userIdString)
+                userRepo.findById(userId).ifPresent { user ->
+                    val authentication = UsernamePasswordAuthenticationToken(
+                        user,
+                        null,
+                        user.authorities
+                    )
+                    authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
+                    SecurityContextHolder.getContext().authentication = authentication
+                }
+            }
+
+            filterChain.doFilter(request, response)
+        } catch (_: Exception) {
+            filterChain.doFilter(request, response)
+        }
     }
 
     private fun recoveryToken(request: HttpServletRequest): String? {
+        val authHeader = request.getHeader("Authorization")
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.replace("Bearer ", "")
+        }
+
         if (request.cookies != null) {
             return Arrays.stream(request.cookies)
-                .filter { cookie -> cookie.name == "AUTH-TOKEN" }
+                .filter { cookie -> cookie.name == "nativeflow-jwt-token" }
                 .findFirst()
                 .map { cookie -> cookie.value }
                 .orElse(null)
