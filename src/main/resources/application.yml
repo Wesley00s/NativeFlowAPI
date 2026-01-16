@@ -7,7 +7,7 @@ jwt:
       path: classpath:certs/public_key.pem
 
   issuer: "mycompany.com"
-  expiration: 3600000
+  expiration: 86400000
 
 server:
   port: 8080
