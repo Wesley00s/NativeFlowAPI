@@ -52,7 +52,7 @@ class CurationService(
         val video = findVideoOrThrow(videoId)
 
         if (isSourceTrack(video, lang)) {
-            throw IllegalArgumentException("Para editar o idioma original, use os endpoints de segmentos.")
+            throw IllegalArgumentException("To edit the original language, use the segment endpoints.")
         }
 
         val updatedTranslations = video.translations.map { t ->
@@ -77,7 +77,7 @@ class CurationService(
     @Transactional
     fun patchOriginalSegment(videoId: String, request: PatchSegmentRequest) {
         val video = findVideoOrThrow(videoId)
-        val sourceData = video.sourceData ?: throw RuntimeException("Vídeo sem transcrição original")
+        val sourceData = video.sourceData ?: throw RuntimeException("Video without original transcription")
 
         val currentList = sourceData.transcription
         val newList = currentList.map { item ->
@@ -105,7 +105,7 @@ class CurationService(
     @Transactional
     fun addOriginalSegment(videoId: String, request: AddSegmentRequest) {
         val video = findVideoOrThrow(videoId)
-        val sourceData = video.sourceData ?: throw RuntimeException("Vídeo sem transcrição original")
+        val sourceData = video.sourceData ?: throw RuntimeException("Video without original transcription")
 
         val newItem = TranscriptionSegment(
             text = request.text,
@@ -128,7 +128,7 @@ class CurationService(
     @Transactional
     fun deleteOriginalSegment(videoId: String, segmentId: String) {
         val video = findVideoOrThrow(videoId)
-        val sourceData = video.sourceData ?: throw RuntimeException("Vídeo sem transcrição original")
+        val sourceData = video.sourceData ?: throw RuntimeException("Video without original transcription")
 
         val newList = sourceData.transcription.filter { it.id != segmentId }
         val newFullText = newList.joinToString(" ") { it.text }
@@ -143,7 +143,7 @@ class CurationService(
 
     private fun findVideoOrThrow(videoId: String) =
         videoRepository.findBySourceId(videoId)
-            .orElseThrow { RuntimeException("Vídeo não encontrado") }
+            .orElseThrow { RuntimeException("Video not found") }
 
     private fun isSourceTrack(video: Video, lang: Lang): Boolean {
 
