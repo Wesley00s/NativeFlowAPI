@@ -1,7 +1,12 @@
 package com.identity.config.security
 
+import com.identity.exceptions.global.CustomAccessDeniedHandler
+import com.identity.exceptions.global.CustomAuthenticationEntryPoint
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
+import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -13,12 +18,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-class SecurityConfig (
-    private val securityFilter: SecurityFilter
+class SecurityConfig(
+    private val securityFilter: SecurityFilter,
+    private val customAccessDeniedHandler: CustomAccessDeniedHandler,
+    private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint
 ) {
-
     @Bean
-    fun filterChain(http: HttpSecurity): SecurityFilterChain {
+    fun filterChain(http: HttpSecurity): SecurityFilterChain =
         http
             .csrf { it.disable() }
             .sessionManagement {
@@ -26,27 +32,35 @@ class SecurityConfig (
             }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
-                    "/v1/queue/**",
-                    "/v1/videos/**",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
-                    "/v1/curation/**",
-                    "/v1/auth/**",
-                    "/docs"
+                    "/v1/content/**",
+                    "/v1/auth/**"
                 ).permitAll()
+
+                auth.requestMatchers("/v1/curation/**", "/v1/videos/**")
+                    .hasAnyRole("ADMIN", "CREATOR")
 
                 auth.anyRequest().authenticated()
             }
 
             .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter::class.java)
             .formLogin { it.disable() }
-            .httpBasic { auth -> auth.disable() }
-        return http.build()
-    }
+            .httpBasic { it.disable() }
+            .exceptionHandling { handling ->
+                handling.accessDeniedHandler(customAccessDeniedHandler)
+                handling.authenticationEntryPoint(customAuthenticationEntryPoint)
+            }.build()
+
 
     @Bean
-    fun bCryptPasswordEncoder(): BCryptPasswordEncoder {
-        return BCryptPasswordEncoder()
-    }
+    fun bCryptPasswordEncoder(): BCryptPasswordEncoder = BCryptPasswordEncoder()
+
+
+    @Bean
+    @Throws(Exception::class)
+    fun authenticationManager(authentication: AuthenticationConfiguration): AuthenticationManager =
+        authentication.getAuthenticationManager()
+
 }
