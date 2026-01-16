@@ -8,6 +8,5 @@ data class SignInResponse(
     val firstName: String,
     val lastName: String,
     val email: String,
-    val role: UserRole,
-    var token: String
+    val role: UserRole
 )
