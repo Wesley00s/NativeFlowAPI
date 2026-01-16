@@ -1,7 +1,7 @@
-package com.identity.exceptions.global
+package com.nativeflow.exceptions.global
 
 import com.identity.exceptions.local.InvalidTokenException
-import com.identity.exceptions.model.ExceptionDetails
+import com.common.exceptions.model.ExceptionDetails
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

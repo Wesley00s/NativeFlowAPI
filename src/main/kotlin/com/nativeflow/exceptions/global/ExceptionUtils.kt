@@ -1,6 +1,6 @@
-package com.identity.exceptions.global
+package com.nativeflow.exceptions.global
 
-import com.identity.exceptions.model.ExceptionDetails
+import com.common.exceptions.model.ExceptionDetails
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Component
