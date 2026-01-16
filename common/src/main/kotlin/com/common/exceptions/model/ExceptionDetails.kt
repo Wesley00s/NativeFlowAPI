@@ -1,4 +1,4 @@
-package com.identity.exceptions.model
+package com.common.exceptions.model
 
 import java.time.Instant
 
