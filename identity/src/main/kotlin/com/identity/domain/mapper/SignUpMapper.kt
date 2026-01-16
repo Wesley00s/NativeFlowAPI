@@ -12,11 +12,12 @@ import org.mapstruct.ReportingPolicy
     unmappedTargetPolicy = ReportingPolicy.IGNORE
 )
 interface SignUpMapper {
+    @Mapping(target = "isActive", source = "active")
     fun toDto(user: User): SignUpResponse
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "isActive", ignore = true)
+    @Mapping(target = "createdAt", expression = "java(java.time.Instant.now())")
+    @Mapping(target = "isActive", constant = "true")
     @Mapping(target = "avatar", ignore = true)
     fun toEntity(dto: SignUpRequest): User
 }

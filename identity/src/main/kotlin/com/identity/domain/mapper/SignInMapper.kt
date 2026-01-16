@@ -16,6 +16,5 @@ interface SignInMapper {
     fun map(email: Email): String = email.value
 
     @Mapping(target = "email", source = "user.email")
-    @Mapping(target = "token", source = "token")
-    fun toDto(user: User, token: String): SignInResponse
+    fun toDto(user: User): SignInResponse
 }
