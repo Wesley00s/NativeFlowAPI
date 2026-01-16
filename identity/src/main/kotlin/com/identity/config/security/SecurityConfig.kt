@@ -36,7 +36,9 @@ class SecurityConfig(
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v1/content/**",
-                    "/v1/auth/**"
+                    "/v1/auth/signIn",
+                    "/v1/auth/signUp",
+                    "/v1/auth/signOut"
                 ).permitAll()
 
                 auth.requestMatchers("/v1/curation/**", "/v1/videos/**")
