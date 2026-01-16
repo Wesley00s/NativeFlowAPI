@@ -1,5 +1,6 @@
 package com.nativeflow.config.docs
 
+import com.common.constansts.SecurityConstants
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info
@@ -15,7 +16,7 @@ class OpenApiConfig {
     @Bean
     fun customOpenAPI(): OpenAPI {
         val securitySchemeName = "cookieAuth"
-        val cookieName = "nativeflow-jwt-token"
+        val cookieName = SecurityConstants.AUTH_COOKIE_NAME
         return OpenAPI()
             .components(
                 Components()
