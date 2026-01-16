@@ -1,7 +1,10 @@
 package com.nativeflow.config.docs
 
+import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info
+import io.swagger.v3.oas.models.security.SecurityRequirement
+import io.swagger.v3.oas.models.security.SecurityScheme
 import org.springdoc.core.models.GroupedOpenApi
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -11,28 +14,58 @@ class OpenApiConfig {
 
     @Bean
     fun customOpenAPI(): OpenAPI {
+        val securitySchemeName = "cookieAuth"
+        val cookieName = "nativeflow-jwt-token"
         return OpenAPI()
+            .components(
+                Components()
+                    .addSecuritySchemes(
+                        securitySchemeName,
+                        SecurityScheme()
+                            .name(cookieName)
+                            .type(SecurityScheme.Type.APIKEY)
+                            .`in`(SecurityScheme.In.COOKIE)
+                    )
+            )
+            .addSecurityItem(
+                SecurityRequirement()
+                    .addList(securitySchemeName)
+            )
             .info(
                 Info()
                     .title("NativeFlow API")
                     .version("1.0")
-                    .description("API do Monolito Modular NativeFlow")
+                    .description("NativeFlow Restful API")
             )
     }
 
     @Bean
-    fun publicApi(): GroupedOpenApi {
-        return GroupedOpenApi.builder()
+    fun publicApi(): GroupedOpenApi = GroupedOpenApi.builder()
             .group("nativeflow-all")
             .packagesToScan("com.nativeflow", "com.content", "com.identity", "com.gamification", "com.learning")
             .build()
-    }
 
     @Bean
-    fun contentApi(): GroupedOpenApi {
-        return GroupedOpenApi.builder()
+    fun contentApi(): GroupedOpenApi = GroupedOpenApi.builder()
             .group("module-content")
             .packagesToScan("com.content")
             .build()
-    }
+
+    @Bean
+    fun identityApi(): GroupedOpenApi = GroupedOpenApi.builder()
+        .group("module-identity")
+        .packagesToScan("com.identity")
+        .build()
+
+    @Bean
+    fun gamificationApi(): GroupedOpenApi = GroupedOpenApi.builder()
+        .group("module-gamification")
+        .packagesToScan("com.gamification")
+        .build()
+
+    @Bean
+    fun learningApi(): GroupedOpenApi = GroupedOpenApi.builder()
+        .group("module-learning")
+        .packagesToScan("com.learning")
+        .build()
 }
