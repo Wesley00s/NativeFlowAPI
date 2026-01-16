@@ -19,14 +19,27 @@ import java.util.*
 @Entity
 @Table(name = "user_tb")
 data class User(
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: UUID? = null,
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Id val id: UUID? = null,
     val avatar: String? = null,
     @Column(nullable = false) val firstName: String,
     @Column(nullable = false) val lastName: String,
-    @AttributeOverride(name = "value", column = Column(name = "email", unique = true, nullable = false))
+    @AttributeOverride(
+        name = "value",
+        column = Column(
+            name = "email",
+            unique = true,
+            nullable = false
+        )
+    )
     val email: Email,
-    @AttributeOverride(name = "value", column = Column(name = "password", nullable = false))
+    @AttributeOverride(
+        name = "value",
+        column = Column(
+            name = "password",
+            nullable = false
+        )
+    )
     var password: Password,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false) val role: UserRole,
