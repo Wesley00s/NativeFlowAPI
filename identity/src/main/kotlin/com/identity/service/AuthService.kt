@@ -44,10 +44,8 @@ class AuthService(
         }
 
         val token = tokenService.generateToken(user.id!!)
-        val result = signInMapper.toDto(user, token)
         addJwtCookieToResponse(token, response)
-
-        return result
+        return signInMapper.toDto(user)
     }
 
     private fun addJwtCookieToResponse(token: String, response: HttpServletResponse) {
