@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/v1/videos")
+@RequestMapping("/v1/content")
 class ContentFeedController(
     private val videoService: VideoService
 ) {
@@ -44,9 +44,13 @@ class ContentFeedController(
     fun getVideoDetails(
         @PathVariable videoId: String,
         @RequestParam(name = "lang", required = false) lang: Lang?
-    ): ResponseEntity<VideoDetailsResponse> {
+    ): ResponseEntity<VideoDetailsResponse> =
+        ResponseEntity.ok(
+            videoService
+                .getVideoDetails(
+                    videoId,
+                    lang
+                )
+        )
 
-        val details = videoService.getVideoDetails(videoId, lang)
-        return ResponseEntity.ok(details)
-    }
 }
