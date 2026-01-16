@@ -9,5 +9,6 @@ CREATE TABLE user_tb
     is_active  BOOLEAN                     NOT NULL,
     email      VARCHAR(255),
     password   VARCHAR(255),
-    CONSTRAINT pk_users PRIMARY KEY (id)
+    CONSTRAINT pk_users PRIMARY KEY (id),
+    CONSTRAINT uc_user_tb_email UNIQUE (email)
 );
