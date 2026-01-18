@@ -37,7 +37,7 @@ enum class Lang(
     HINDI("hi", "Hindi");
 
     companion object {
-        fun findMatch(whisperCode: String?, llmLabel: String?): Lang? {
+        fun findMatch(whisperCode: String? = null, llmLabel: String? = null): Lang? {
             return entries.find { it.llmLabel.equals(llmLabel, ignoreCase = true) }
                 ?: entries.find { it.whisperCode.equals(whisperCode, ignoreCase = true) }
         }
