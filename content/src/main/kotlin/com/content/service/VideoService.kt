@@ -1,15 +1,18 @@
 package com.content.service
 
-import com.content.api.v1.dto.VideoTaskRequest
-import com.content.api.v1.dto.messaging.TranscriptionResultPayload
-import com.content.api.v1.dto.messaging.TranslationCommandPayload
-import com.content.api.v1.dto.messaging.TranslationResultPayload
-import com.content.api.v1.dto.response.TranscriptionSegmentResponse
-import com.content.api.v1.dto.response.TranslationResponse
-import com.content.api.v1.dto.response.VideoDetailsResponse
-import com.content.api.v1.dto.response.VideoListItemResponse
+import com.content.api.dto.VideoTaskRequest
+import com.content.api.dto.messaging.GlossaryResultPayload
+import com.content.api.dto.messaging.TranscriptionResultPayload
+import com.content.api.dto.messaging.TranslationCommandPayload
+import com.content.api.dto.messaging.TranslationResultPayload
+import com.content.api.dto.response.GlossaryResponse
+import com.content.api.dto.response.TranscriptionSegmentResponse
+import com.content.api.dto.response.TranslationResponse
+import com.content.api.dto.response.VideoDetailsResponse
+import com.content.api.dto.response.VideoListItemResponse
 import com.content.domain.enums.Lang
 import com.content.domain.enums.VideoStatus
+import com.content.domain.model.GlossaryTerm
 import com.content.domain.model.SourceData
 import com.content.domain.model.TranscriptionSegment
 import com.content.domain.model.TranslationData
@@ -45,7 +48,7 @@ class VideoService(
                 val command = TranslationCommandPayload(
                     videoId = request.videoId,
                     originalText = video.sourceData.fullText,
-                    sourceLang = video.sourceData.language.llmLabel,
+                    sourceLang = video.sourceData.language,
                     targetLang = request.translationLanguage.llmLabel,
                     transcription = emptyList()
                 )
@@ -99,7 +102,7 @@ class VideoService(
             viewCount = payload.sourceData.viewCount,
             thumbnailUrl = payload.sourceData.thumbnailUrl,
             sourceData = SourceData(
-                language = payload.sourceData.language,
+                language = payload.sourceData.language.llmLabel,
                 fullText = payload.sourceData.fullText,
                 transcription = payload.sourceData.transcription.map {
                     TranscriptionSegment(
@@ -156,7 +159,7 @@ class VideoService(
                 description = video.author?.let { "Canal: $it" },
                 thumbnailUrl = video.thumbnailUrl,
                 durationSeconds = video.durationSeconds,
-                lang = video.sourceData?.language ?: Lang.EN_US,
+                lang = Lang.findMatch(video.sourceData?.language) ?: Lang.EN_US,
                 status = video.status
             )
         }
@@ -170,14 +173,12 @@ class VideoService(
             ?: throw RuntimeException("Video data is incomplete for ID: $videoId")
 
         val availableLangs = video.translations.mapNotNull { translation ->
-            Lang.entries.find { langEnum ->
-                langEnum.llmLabel.equals(translation.languageCode, ignoreCase = true)
-            }
+            Lang.findMatch(translation.languageCode, translation.languageCode)
         }
 
         val translationData = if (requestedLang != null) {
             video.translations.find {
-                it.languageCode.equals(requestedLang.llmLabel, ignoreCase = true)
+                Lang.findMatch(it.languageCode, it.languageCode) == requestedLang
             }
         } else {
             null
@@ -189,9 +190,8 @@ class VideoService(
             author = video.author,
             videoUrl = "https://www.youtube.com/watch?v=${video.sourceId}",
             durationSeconds = video.durationSeconds,
-            level = sourceData.language.name,
             status = video.status,
-            originalLanguage = sourceData.language,
+            originalLanguage = Lang.findMatch(sourceData.language) ?: Lang.EN_US,
 
             availableLanguages = availableLangs,
 
@@ -204,10 +204,48 @@ class VideoService(
             },
             translation = translationData?.let {
                 TranslationResponse(
-                    language = requestedLang!!,
-                    fullText = it.translatedText
+                    language = requestedLang ?: Lang.PT_BR,
+                    fullText = it.translatedText,
+                    glossary = it.glossary.map { term ->
+                        GlossaryResponse(term.term, term.definition)
+                    }
                 )
             }
         )
+    }
+
+    @Transactional
+    fun handleGlossarySuccess(payload: GlossaryResultPayload) {
+        logger.info("Processing glossary for videoId: {}", payload.videoId)
+
+        val video = videoRepository.findBySourceId(payload.videoId)
+            .orElseThrow { RuntimeException("Video not found: ${payload.videoId}") }
+
+        val targetLang = payload.targetLang?.whisperCode ?: video.translations.lastOrNull()?.languageCode
+
+        if (targetLang == null) {
+            logger.warn("Could not determine language for glossary. Skipping.")
+            return
+        }
+        
+        val newGlossaryTerms = payload.items.map {
+            GlossaryTerm(term = it.term, definition = it.definition)
+        }
+        
+        val updatedTranslations = video.translations.map { translation ->
+            if (translation.languageCode == targetLang) {
+                translation.copy(glossary = newGlossaryTerms)
+            } else {
+                translation
+            }
+        }
+
+        val videoUpdated = video.copy(
+            translations = updatedTranslations,
+            updatedAt = Instant.now()
+        )
+
+        videoRepository.save(videoUpdated)
+        logger.info("Glossary saved for video {} (Lang: {}). Items: {}", video.sourceId, targetLang, newGlossaryTerms.size)
     }
 }
