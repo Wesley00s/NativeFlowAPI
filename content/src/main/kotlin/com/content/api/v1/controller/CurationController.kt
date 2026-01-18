@@ -1,9 +1,9 @@
 package com.content.api.v1.controller
 
-import com.content.api.v1.dto.PatchSegmentRequest
-import com.content.api.v1.dto.request.AddSegmentRequest
-import com.content.api.v1.dto.request.UpdateTextRequest
-import com.content.api.v1.dto.response.CurationViewResponse
+import com.content.api.dto.PatchSegmentRequest
+import com.content.api.dto.request.AddSegmentRequest
+import com.content.api.dto.request.UpdateTextRequest
+import com.content.api.dto.response.CurationViewResponse
 import com.content.domain.enums.Lang
 import com.content.service.CurationService
 import org.springframework.http.ResponseEntity
@@ -57,6 +57,14 @@ class CurationController(
         @PathVariable segmentId: String
     ): ResponseEntity<Void> {
         curationService.deleteOriginalSegment(videoId, segmentId)
+        return ResponseEntity.noContent().build()
+    }
+
+    @DeleteMapping("/{videoId}")
+    fun deleteVideo(
+        @PathVariable videoId: String
+    ): ResponseEntity<Void> {
+        curationService.delete(videoId)
         return ResponseEntity.noContent().build()
     }
 }
