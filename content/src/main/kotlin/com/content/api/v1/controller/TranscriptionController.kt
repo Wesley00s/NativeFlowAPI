@@ -1,7 +1,7 @@
 package com.content.api.v1.controller
 
-import com.content.api.v1.dto.VideoTaskRequest
-import com.content.api.v1.dto.response.TextResponse
+import com.content.api.dto.VideoTaskRequest
+import com.content.api.dto.response.TextResponse
 import com.content.service.VideoService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
