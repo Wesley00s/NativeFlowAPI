@@ -1,9 +1,9 @@
 package com.content.api.v1.controller
 
-import com.content.api.v1.dto.response.ApiResponse
-import com.content.api.v1.dto.response.PaginationResponse
-import com.content.api.v1.dto.response.VideoDetailsResponse
-import com.content.api.v1.dto.response.VideoListItemResponse
+import com.content.api.dto.response.ApiResponse
+import com.content.api.dto.response.PaginationResponse
+import com.content.api.dto.response.VideoDetailsResponse
+import com.content.api.dto.response.VideoListItemResponse
 import com.content.domain.enums.Lang
 import com.content.service.VideoService
 import org.springframework.http.ResponseEntity
