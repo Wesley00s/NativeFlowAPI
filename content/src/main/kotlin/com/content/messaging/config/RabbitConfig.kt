@@ -22,6 +22,7 @@ class RabbitConfig {
         const val VIDEO_TRANSCRIPTION_RESULT = "video.transcription.result"
         const val VIDEO_TRANSLATION_CMD = "video.translation.cmd"
         const val VIDEO_TRANSLATION_RESULT = "video.translation.result"
+        const val VIDEO_GLOSSARY_RESULT = "video.glossary.result"
     }
 
     @Bean
@@ -63,4 +64,6 @@ class RabbitConfig {
     fun translationCmdQueue() = Queue(VIDEO_TRANSLATION_CMD, true)
     @Bean
     fun translationResultQueue() = Queue(VIDEO_TRANSLATION_RESULT, true)
+    @Bean
+    fun glossaryResultQueue() = Queue(VIDEO_GLOSSARY_RESULT, true)
 }
