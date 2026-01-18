@@ -1,7 +1,8 @@
 package com.content.messaging
 
-import com.content.api.v1.dto.messaging.TranscriptionResultPayload
-import com.content.api.v1.dto.messaging.TranslationResultPayload
+import com.content.api.dto.messaging.GlossaryResultPayload
+import com.content.api.dto.messaging.TranscriptionResultPayload
+import com.content.api.dto.messaging.TranslationResultPayload
 import com.content.messaging.config.RabbitConfig
 import com.content.service.VideoService
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -48,6 +49,20 @@ class WorkerResultListener(
             }
         } catch (e: Exception) {
             logger.error("Failed to process Translation message", e)
+        }
+    }
+
+    @RabbitListener(queues = [RabbitConfig.VIDEO_GLOSSARY_RESULT])
+    fun handleGlossaryResult(jsonPayload: String) {
+        logger.debug("Received Glossary Payload: {}", jsonPayload)
+
+        try {
+            val payload = objectMapper.readValue(jsonPayload, GlossaryResultPayload::class.java)
+
+            videoService.handleGlossarySuccess(payload)
+
+        } catch (e: Exception) {
+            logger.error("Failed to process Glossary message", e)
         }
     }
 }
