@@ -1,9 +1,9 @@
 package com.content.service
 
-import com.content.api.v1.dto.CurationSegment
-import com.content.api.v1.dto.PatchSegmentRequest
-import com.content.api.v1.dto.request.AddSegmentRequest
-import com.content.api.v1.dto.response.CurationViewResponse
+import com.content.api.dto.CurationSegment
+import com.content.api.dto.PatchSegmentRequest
+import com.content.api.dto.request.AddSegmentRequest
+import com.content.api.dto.response.CurationViewResponse
 import com.content.domain.enums.Lang
 import com.content.domain.model.TranscriptionSegment
 import com.content.domain.model.Video
@@ -30,7 +30,7 @@ class CurationService(
             fullText = video.sourceData?.fullText
         } else {
             val translation = video.translations.find {
-                it.languageCode.equals(lang.llmLabel, ignoreCase = true)
+                it.languageCode == lang.whisperCode
             }
             fullText = translation?.translatedText
         }
@@ -57,7 +57,7 @@ class CurationService(
 
         val updatedTranslations = video.translations.map { t ->
 
-            if (t.languageCode.equals(lang.llmLabel, ignoreCase = true)) {
+            if (t.languageCode == lang.whisperCode) {
                 t.copy(
                     translatedText = newText,
                     status = "CURATED_TEXT",
@@ -147,6 +147,13 @@ class CurationService(
 
     private fun isSourceTrack(video: Video, lang: Lang): Boolean {
 
-        return video.sourceData?.language == lang
+        return Lang.findMatch(video.sourceData?.language, video.sourceData?.language) == lang
+    }
+
+    fun delete(videoId: String) {
+        videoRepository.findBySourceId(videoId)
+            .orElseThrow { RuntimeException("Video not found") }
+
+        videoRepository.deleteBySourceId(videoId)
     }
 }
